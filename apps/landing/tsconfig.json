@@ -1,0 +1,21 @@
+{
+  "extends": "@metrik/tsconfig/base.json",
+  "compilerOptions": {
+    "baseUrl": ".",
+    "paths": {
+      "@/hooks/*": ["./src/components/hooks/*"],
+      "@/public/*": ["./public/*"],
+      "@/*": ["./src/*"],
+      "@/env": ["./src/env.mjs"]
+    },
+    "plugins": [
+      {
+        "name": "next"
+      }
+    ],
+    "tsBuildInfoFile": "node_modules/.cache/tsbuildinfo.json",
+    "strictNullChecks": true
+  },
+  "include": [".", ".next/types/**/*.ts"],
+  "exclude": ["node_modules"]
+}

@@ -1,0 +1,38 @@
+# fly.toml app configuration file generated for metrik-quirrel on 2024-01-22T22:47:33-07:00
+#
+# See https://fly.io/docs/reference/configuration/ for information about how to use this file.
+#
+
+app = "metrik-quirrel"
+primary_region = "iad"
+
+[build]
+  image = "ghcr.io/quirrel-dev/quirrel:main"
+
+[[services]]
+  protocol = "tcp"
+  internal_port = 9181
+
+  [[services.ports]]
+    port = 80
+    handlers = ["http"]
+
+  [[services.ports]]
+    port = 443
+    handlers = ["tls", "http"]
+  [services.concurrency]
+    type = "connections"
+    hard_limit = 25
+    soft_limit = 20
+
+  [[services.http_checks]]
+    interval = "10s"
+    timeout = "2s"
+    method = "get"
+    path = "/health"
+    protocol = "http"
+
+[[vm]]
+  cpu_kind = "shared"
+  cpus = 1
+  memory_mb = 512

@@ -1,0 +1,40 @@
+{
+  "name": "@metrik/db",
+  "version": "0.1.0",
+  "main": "./index.ts",
+  "types": "./index.ts",
+  "license": "MIT",
+  "scripts": {
+    "clean": "rm -rf .turbo node_modules",
+    "db:generate": "pnpm with-env prisma generate",
+    "db:push": "pnpm with-env prisma db push --skip-generate",
+    "db:start": "pscale connect main --port 3309 dev",
+    "dev": "pnpm with-env prisma studio --port 5556",
+    "with-env": "dotenv -e ../../.env --"
+  },
+  "dependencies": {
+    "@47ng/cloak": "^1.1.0",
+    "@planetscale/database": "^1.18.0",
+    "@prisma/adapter-planetscale": "^5.14.0",
+    "@prisma/client": "^5.15.1",
+    "prisma-field-encryption": "^1.5.2",
+    "prisma-json-types-generator": "^3.0.4",
+    "undici": "^6.17.0"
+  },
+  "devDependencies": {
+    "@metrik/eslint-config": "workspace:^",
+    "@metrik/prettier-config": "workspace:^",
+    "@metrik/tsconfig": "workspace:^",
+    "@types/node": "^20.12.8",
+    "dotenv-cli": "^7.4.2",
+    "prisma": "^5.15.1",
+    "typescript": "^5.5.2"
+  },
+  "eslintConfig": {
+    "root": true,
+    "extends": [
+      "@metrik/eslint-config/base"
+    ]
+  },
+  "prettier": "@metrik/prettier-config"
+}

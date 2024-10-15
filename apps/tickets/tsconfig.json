@@ -1,0 +1,15 @@
+{
+  "extends": [
+    "@sapphire/ts-config",
+    "@sapphire/ts-config/extra-strict",
+    "@sapphire/ts-config/decorators",
+    "@metrik/tsconfig/base.json"
+  ],
+  "compilerOptions": {
+    "noUnusedLocals": false,
+    "baseUrl": ".",
+    "tsBuildInfoFile": "node_modules/.cache/tsbuildinfo.json"
+  },
+  "include": ["."],
+  "exclude": ["node_modules"]
+}

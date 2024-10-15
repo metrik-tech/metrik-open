@@ -1,0 +1,10 @@
+[phases.setup]
+  nixpkgsArchive = '166a63579d0070bf4f036726b9ac24a784d70d67'
+  nixPkgs = ['...', 'bun']
+  nixLibs = ['...', 'openssl']
+
+[phases.build]
+  cmds = ["echo building!"]
+
+[start]
+  cmd = 'pnpm run api:start'

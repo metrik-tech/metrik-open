@@ -1,0 +1,908 @@
+generator client {
+  provider        = "prisma-client-js"
+  previewFeatures = ["driverAdapters", "relationJoins"]
+}
+
+generator json {
+  provider = "prisma-json-types-generator"
+}
+
+datasource db {
+  provider     = "mysql"
+  url          = env("PLANETSCALE_URL")
+  relationMode = "prisma"
+}
+
+model Account {
+  id                String  @id
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String? @db.Text
+  access_token      String? @db.Text
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String? @db.Text
+  session_state     String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+  @@index([userId])
+}
+
+model Session {
+  id           String   @id
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+}
+
+model User {
+  id            String    @id
+  name          String?
+  email         String?   @unique
+  image         String?
+  emailVerified DateTime?
+  onboarded     Boolean   @default(false)
+
+  lastLogin DateTime?
+  robloxId  String?   @unique
+
+  discordId String? @unique
+
+  role GlobalRole @default(CUSTOMER)
+
+  memberships Membership[]
+
+  accounts      Account[]
+  sessions      Session[]
+  auditItems    AuditItem[]
+  authenticator Authenticator[]
+
+  studioTrialUsed  Boolean @default(false)
+  stripeCustomerId String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @default(now()) @updatedAt
+}
+
+model Authenticator {
+  id                   String  @id
+  credentialID         String  @unique
+  userId               String
+  providerAccountId    String
+  credentialPublicKey  String
+  counter              Int
+  credentialDeviceType String
+  credentialBackedUp   Boolean
+  transports           String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+model UsageLimits {
+  id String @id
+
+  analyticsRetention     Int @default(0) // in days
+  uniqueIssuesCount      Int @default(0)
+  broadcastMessagesCount Int @default(0)
+  actionRunsCount        Int @default(0)
+  moderationEventsCount  Int @default(0)
+  experienceVisitsCount  Int @default(0)
+  auditLogRetention      Int @default(0) // in days
+  maxProjects            Int @default(0)
+  dynamicFlagCount       Int @default(0)
+  staticFlagCount        Int @default(0)
+
+  studio   Studio @relation(fields: [studioId], references: [id], onDelete: Cascade)
+  studioId String @unique
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @default(now()) @updatedAt
+}
+
+model ActiveServer {
+  id String @id
+
+  serverId String @unique
+
+  project   Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  projectId String
+
+  region String @default("?")
+
+  placeId      String
+  placeVersion Int    @default(0)
+
+  serverType ServerType @default(PUBLIC)
+
+  lastPing   DateTime @default(now())
+  /// [JsonNumberArray]
+  players    Json     @default("[]")
+  maxPlayers Int
+
+  @@index([projectId])
+}
+
+model Studio {
+  id   String @id
+  name String
+
+  avatarUrl String?
+
+  plan                 Plan         @default(FREE)
+  planSlug             String       @default("Free")
+  usageLimits          UsageLimits?
+  stripeCustomerId     String?      @unique
+  stripeSubscriptionId String?      @unique
+
+  trialEnds DateTime?
+
+  membership Membership[]
+  projects   Project[]
+  invites    Invite[]
+  auditLog   AuditItem[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @default(now()) @updatedAt
+}
+
+model ModerationEvent {
+  id String @id
+
+  timestamp DateTime @default(now())
+
+  project   Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  projectId String
+
+  type ModerationEventType
+
+  reason String? @db.Text
+
+  expiry DateTime?
+
+  moderatorUserId String
+
+  userId String
+
+  @@index([projectId])
+}
+
+model Membership {
+  id   String         @id
+  role MembershipRole
+
+  studio   Studio @relation(fields: [studioId], references: [id], onDelete: Cascade)
+  studioId String
+
+  user   User?   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @default(now()) @updatedAt
+
+  @@index([studioId])
+  @@index([userId])
+}
+
+model AuditItem {
+  id String @id
+
+  type AuditType
+
+  studio   Studio @relation(fields: [studioId], references: [id], onDelete: Cascade)
+  studioId String
+
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId String
+
+  subject String?
+
+  createdAt DateTime @unique @default(now()) @db.DateTime(6)
+
+  @@index([studioId])
+  @@index([userId])
+}
+
+model Invite {
+  id String @id
+
+  nickname String @default("None specified")
+
+  code String @unique // The 8-character password to enter the studio
+
+  limitedUses   Boolean @default(true)
+  usesRemaining Int?
+
+  studio   Studio @relation(fields: [studioId], references: [id], onDelete: Cascade)
+  studioId String
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @default(now()) @updatedAt
+
+  @@index([studioId])
+}
+
+model Project {
+  id         String @id
+  universeId String
+  placeId    String
+
+  paused Boolean @default(false)
+
+  openCloudToken   OpenCloudToken?
+  openCloudSession OpenCloudSession?
+
+  openCloudError Boolean @default(false)
+
+  name String
+
+  studio   Studio @relation(fields: [studioId], references: [id], onDelete: Cascade)
+  studioId String
+
+  notificationChannels NotificationChannel[]
+  tokens               Token[]
+  actions              Action[]
+  analytics            Analytic[]
+  issues               Issue[]
+  runs                 ActionRun[]
+  activeServers        ActiveServer[]
+  moderationEvents     ModerationEvent[]
+  broadcasts           Broadcast[]
+  dynamicFlags         DynamicFlag[]
+  staticFlags          StaticFlag[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @default(now()) @updatedAt
+
+  issueStaleAfterDays Int @default(7)
+
+  issuePresetAutoFilter PresetAutoFilter[]
+  issueCustomAutoFilter CustomAutoFilter[]
+
+  @@index(studioId)
+}
+
+model PresetAutoFilter {
+  id String @id
+
+  presetAutoFilter PresetAutoFilters
+
+  project   Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  projectId String
+
+  @@unique([projectId, presetAutoFilter])
+}
+
+model CustomAutoFilter {
+  id String @id
+
+  name  String
+  regex String
+  field AutoFilterField
+
+  project   Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  projectId String
+
+  @@unique([projectId, name])
+}
+
+model OpenCloudSession {
+  id String @id
+
+  project   Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  projectId String  @unique
+
+  accessToken         String   @db.Text ///@encrypted
+  refreshToken        String   @db.Text ///@encrypted
+  accessTokenExpires  DateTime
+  refreshTokenExpires DateTime
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @default(now()) @updatedAt
+
+  @@index([projectId])
+}
+
+model OpenCloudToken {
+  token String @id ///@encrypted
+
+  project   Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  projectId String  @unique
+}
+
+model Token {
+  id String @id
+
+  project   Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  projectId String
+
+  nickname String
+
+  hashedToken String @unique
+  prefix      String
+
+  userId String?
+
+  expiry DateTime?
+
+  lastUsed DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @default(now()) @updatedAt
+
+  @@unique([projectId, prefix])
+}
+
+model Analytic {
+  id String @id
+
+  timestamp DateTime @default(now())
+
+  playerCount          Int
+  visits               String
+  serverCount          Int
+  averageServerPlayers Int
+  averageServerPing    Int
+  averageServerFps     Int
+  likes                Int
+  dislikes             Int
+  favourites           Int
+
+  project   Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  projectId String
+
+  @@index([projectId])
+}
+
+model Issue {
+  id String @id
+
+  title String? // defaults to the error message
+
+  message String @db.Text
+
+  firstSeen DateTime @default(now())
+
+  errors Error[]
+
+  resolved Boolean @default(false)
+
+  stale   Boolean   @default(false)
+  staleAt DateTime?
+
+  project   Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  projectId String
+
+  @@index([projectId])
+}
+
+model Error {
+  id String @id
+
+  placeVersions ErrorPlaceVersion[]
+  serverIds     ErrorServerId[]
+  placeIds      ErrorPlaceId[]
+
+  environment ErrorEnvironment
+
+  timestamp DateTime @default(now())
+
+  message    String @db.Text
+  occurences Int
+  script     String
+  trace      String @db.Text
+
+  scriptAncestors ErrorScriptAncestor[]
+  breadcrumbs     ErrorBreadcrumbs[]
+  /// [JsonObject]
+  context         Json?
+
+  issue   Issue  @relation(fields: [issueId], references: [id], onDelete: Cascade)
+  issueId String
+
+  @@index([issueId])
+}
+
+model ErrorPlaceVersion {
+  id String @id
+
+  placeVersion String
+
+  error   Error  @relation(fields: [errorId], references: [id], onDelete: Cascade)
+  errorId String
+
+  @@unique([errorId, placeVersion])
+}
+
+model ErrorServerId {
+  id String @id
+
+  serverId String
+
+  error   Error  @relation(fields: [errorId], references: [id], onDelete: Cascade)
+  errorId String
+
+  @@unique([errorId, serverId])
+}
+
+model ErrorPlaceId {
+  id String @id
+
+  placeId String
+
+  error   Error  @relation(fields: [errorId], references: [id], onDelete: Cascade)
+  errorId String
+
+  @@unique([errorId, placeId])
+}
+
+model ErrorScriptAncestor {
+  id String @id
+
+  name  String
+  class String
+
+  error   Error?  @relation(fields: [errorId], references: [id])
+  errorId String?
+
+  @@index([errorId])
+}
+
+model ErrorBreadcrumbs {
+  id String @id
+
+  message    String
+  timestamps ErrorBreadcrumbsTimestamps[]
+
+  error   Error  @relation(fields: [errorId], references: [id])
+  errorId String
+
+  @@index([errorId])
+}
+
+model ErrorBreadcrumbsTimestamps {
+  id String @id
+
+  timestamp DateTime
+
+  breadcrumb   ErrorBreadcrumbs @relation(fields: [breadcrumbId], references: [id])
+  breadcrumbId String
+
+  @@index([breadcrumbId])
+}
+
+model Action {
+  id String @id
+
+  name        String
+  key         String
+  description String? @db.VarChar(500)
+
+  placeId      String
+  placeVersion Int    @default(0)
+
+  /// [JsonStringArray]
+  serverIds Json
+
+  arguments ActionArguments[]
+
+  project   Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  projectId String
+
+  activated      DateTime         @default(now())
+  ActionServerId ActionServerId[]
+
+  @@unique([projectId, key, placeVersion])
+}
+
+model Broadcast {
+  id String @id
+
+  message String @db.Text
+
+  userId String
+
+  project   Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  projectId String
+
+  type BroadcastType
+
+  serverIds     BroadcastServerId[]
+  placeVersions BroadcastPlaceVersion[]
+
+  timestamp DateTime @default(now())
+
+  @@index([projectId])
+}
+
+model BroadcastServerId {
+  id String @id
+
+  serverId String
+
+  broadcast   Broadcast @relation(fields: [broadcastId], references: [id], onDelete: Cascade)
+  broadcastId String
+
+  @@unique([broadcastId, serverId])
+}
+
+model BroadcastPlaceVersion {
+  id String @id
+
+  placeVersion String
+
+  broadcast   Broadcast @relation(fields: [broadcastId], references: [id], onDelete: Cascade)
+  broadcastId String
+
+  @@unique([broadcastId, placeVersion])
+}
+
+model ActionServerId {
+  id String @id
+
+  serverId String
+
+  action   Action @relation(fields: [actionId], references: [id], onDelete: Cascade)
+  actionId String
+
+  @@unique([actionId, serverId])
+}
+
+model ActionRun {
+  id String @id
+
+  status ActionRunStatus
+
+  timestamp DateTime @default(now())
+
+  exclusive Boolean @default(false)
+
+  claimantServerId String?
+
+  name      String
+  key       String
+  arguments ActionRunArguments[]
+
+  /// [JsonStringArray]
+  serverIds    Json
+  placeId      String
+  placeVersion Int
+
+  project   Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  projectId String
+
+  result  ActionRunResult?
+  details ActionRunDetails[]
+
+  @@index([projectId])
+}
+
+model ActionRunDetails {
+  id String @id
+
+  run   ActionRun @relation(fields: [runId], references: [id], onDelete: Cascade)
+  runId String    @unique
+
+  type    ActionRunDetailType
+  /// [ActionRunDetailContent]
+  content Json
+
+  timestamp DateTime @default(now())
+}
+
+model ActionRunResult {
+  id String @id
+
+  timestamp DateTime @default(now())
+
+  success Boolean
+
+  value Json
+
+  run   ActionRun @relation(fields: [runId], references: [id], onDelete: Cascade)
+  runId String    @unique
+}
+
+model ActionRunArguments {
+  id String @id
+
+  name  String
+  value String
+  type  ActionArgumentType
+  array Boolean            @default(false)
+
+  run   ActionRun @relation(fields: [runId], references: [id], onDelete: Cascade)
+  runId String
+
+  @@index([runId])
+}
+
+model ActionArguments {
+  id String @id
+
+  name     String
+  required Boolean            @default(false)
+  type     ActionArgumentType
+  default  String?
+  array    Boolean            @default(false)
+
+  description String? @db.VarChar(200)
+
+  action   Action @relation(fields: [actionId], references: [id], onDelete: Cascade)
+  actionId String
+
+  @@index([actionId])
+}
+
+model NotificationChannel {
+  id String @id
+
+  type       ChannelType
+  webhookUrl String      @db.Text
+  nickname   String
+
+  events Event[]
+
+  project   Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  projectId String
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @default(now()) @updatedAt
+
+  @@index([projectId])
+}
+
+model Event {
+  id String @id
+
+  type ChannelEvents
+
+  notificationChannel   NotificationChannel @relation(fields: [notificationChannelId], references: [id], onDelete: Cascade)
+  notificationChannelId String
+
+  @@index([notificationChannelId])
+}
+
+model StaticFlag {
+  id String @id
+
+  name  String
+  value String
+  type  FlagType
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @default(now()) @updatedAt
+
+  project   Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  projectId String
+
+  @@unique([projectId, name])
+}
+
+model DynamicFlag {
+  id String @id
+
+  name  String
+  value String
+  type  FlagType
+
+  rules         DynamicFlagRule[]
+  ruleBehaviour DynamicFlagRuleBehaviour?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @default(now()) @updatedAt
+
+  project   Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  projectId String
+
+  @@unique([projectId, name])
+}
+
+model DynamicFlagRule {
+  id String @id
+
+  type     DynamicFlagRuleType
+  param    String? // for example for rules that require groups (group id) 
+  // PLAYER_ROLE_IN_GROUP(ruleParam) EQUALS "Admin"
+  // PLAYER_RANK_IN_GROUP(ruleParam) GREATER_THAN 254
+  operator DynamicFlagOperator
+  operand  String
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @default(now()) @updatedAt
+
+  flag   DynamicFlag @relation(fields: [flagId], references: [id], onDelete: Cascade)
+  flagId String
+
+  @@index([flagId])
+}
+
+enum ServerType {
+  PUBLIC
+  PRIVATE
+  RESERVED
+  STUDIO
+}
+
+enum ActionRunResultType {
+  STRING
+  JSON
+}
+
+enum ActionRunStatus {
+  PENDING
+  SUCCESS
+  FAILED
+}
+
+enum BroadcastType {
+  CHAT
+  TOAST
+  ALERT
+  TOPBAR
+}
+
+enum ErrorEnvironment {
+  CLIENT
+  SERVER
+}
+
+enum AuditType {
+  JOIN_STUDIO
+  RENAME_STUDIO
+  LEAVE_STUDIO
+  CREATE_PROJECT
+  DELETE_PROJECT
+  RENAME_PROJECT
+  CREATE_INVITE
+  DELETE_INVITE
+  CHANGE_MEMBER_ROLE
+  REMOVE_MEMBER
+  CREATE_NOTIFICATION_CHANNEL
+  DELETE_NOTIFICATION_CHANNEL
+}
+
+enum ActionArgumentType {
+  STRING
+  NUMBER
+  BOOLEAN
+  PLAYER
+  USER
+
+  @@map("ArgumentType")
+}
+
+enum FlagType {
+  STRING
+  NUMBER
+  BOOLEAN
+}
+
+enum ModerationEventType {
+  BAN
+  KICK
+  UNBAN
+  WARN
+  REPEAL
+}
+
+enum ChannelEvents {
+  MILESTONES
+  USAGE
+  ERRORS
+  REVENUE
+  // AUDIT_LOG
+}
+
+enum ChannelType {
+  DISCORD
+  SLACK
+  GUILDED
+}
+
+enum LogType {
+  ERROR
+  INFO
+  WARNING
+}
+
+enum MembershipRole {
+  OWNER
+  ADMIN
+  USER
+}
+
+// The owners of the SaaS (you) can have a SUPERADMIN role to access all data
+enum GlobalRole {
+  SUPERADMIN
+  CUSTOMER
+}
+
+enum ActionRunBehaviour {
+  ALL_SERVERS
+  RANDOM_SERVER
+  SELECTED_SERVERS
+  // SELECTED_PLACE_VERSIONS
+  // SELECTED_PLACE_VERSION
+  SELECTED_SERVER
+}
+
+enum ActionRunDetailType {
+  STARTED
+  CLAIMED
+  FAILED
+  FINISHED
+  RESULT
+}
+
+enum DynamicFlagOperator {
+  EQUALS
+  NOT_EQUALS
+  GREATER_THAN
+  LESS_THAN
+  GREATER_THAN_OR_EQUALS
+  LESS_THAN_OR_EQUALS
+  CONTAINS
+  NOT_CONTAINS
+}
+
+enum DynamicFlagRuleType {
+  REGION // The region of the server, string
+  PLAYER_COUNT // The amount of players in the server, number
+  PLAYERS // The players in the server, array
+  PLACE_VERSION // The place version of the server, number
+  SERVER_TYPE // The type of the server (PUBLIC, PRIVATE, RESERVED, STUDIO), string
+  PLAYER_ROLE_IN_GROUP // Any player in the server has the role in the group provided in the ruleParam, string of the role name
+  PLAYER_RANK_IN_GROUP // Any player in the server has the rank in the group provided in the ruleParam, number of the rank
+  PLAYER_IN_GROUP // Any player in the server is in the group, string of the group ID (NO RULE PARAM)
+  PLAYER_NOT_IN_GROUP // Any player in the server is not in the group, string of the group ID (NO RULE PARAM)
+}
+
+enum DynamicFlagRuleBehaviour {
+  ALL_TRUE
+  SOME_TRUE
+  ALL_FALSE
+}
+
+enum Plan {
+  FREE
+  PARTNER
+  TRIAL
+  NONE
+  CUSTOM
+  PRO
+  ENTERPRISE
+}
+
+enum PresetAutoFilters {
+  COREGUI_SCRIPTS
+  HSRDATACONTENTPROVIDER
+  SOUNDS
+  ASSET_ACCESS
+  ASSET_LOADING
+  CLIENT
+  ANONYMOUS_SCRIPTS
+}
+
+enum AutoFilterField {
+  SCRIPT_PATH
+  MESSAGE
+  TRACE
+}

@@ -1,0 +1,31 @@
+{
+	"name": "@metrik/lily",
+	"version": "0.0.0",
+	"private": true,
+	"scripts": {
+		"deploy": "wrangler deploy",
+		"dev": "wrangler dev",
+		"start": "wrangler dev",
+		"cf-typegen": "wrangler types"
+	},
+	"devDependencies": {
+		"@cloudflare/workers-types": "^4.20240423.0",
+		"@metrik/eslint-config": "workspace:^",
+		"@metrik/prettier-config": "workspace:^",
+		"@metrik/tsconfig": "workspace:^",
+		"@types/itty-router-extras": "^0.4.3",
+		"typescript": "^5.5.2",
+		"wrangler": "^3.53.0"
+	},
+	"eslintConfig": {
+		"root": true,
+		"extends": [
+			"@metrik/eslint-config/base"
+		]
+	},
+	"prettier": "@metrik/prettier-config",
+	"dependencies": {
+		"itty-router": "^5.0.17",
+		"itty-router-extras": "^0.4.6"
+	}
+}

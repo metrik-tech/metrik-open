@@ -1,0 +1,64 @@
+{
+  "name": "@metrik/api",
+  "version": "0.1.1",
+  "private": true,
+  "type": "module",
+  "types": "./src/index.ts",
+  "main": "./src/index.ts",
+  "scripts": {
+    "dev": "START_CRON=false pnpm with-env bun --watch run src/index.ts",
+    "dev:with-cron": "pnpm with-env bun --watch run src/index.ts",
+    "api:start": "pnpm quirrel:ci && pnpm with-env bun run src/index.ts",
+    "quirrel:ci": "pnpm with-env quirrel ci",
+    "with-env": "dotenv -e ../../.env --",
+    "env-run": "pnpm with-env bun run"
+  },
+  "dependencies": {
+    "@axiomhq/js": "1.0.0",
+    "@axiomhq/pino": "^1.0.0",
+    "@elysiajs/cors": "1.0.2",
+    "@elysiajs/swagger": "1.0.5",
+    "@metrik/db": "workspace:^",
+    "@metrik/id": "workspace:^",
+    "@metrik/jwt": "workspace:^",
+    "@metrik/opencloud": "workspace:^",
+    "@metrik/stripe-constants": "workspace:^",
+    "@quirrel/owl": "^0.15.0",
+    "@sentry/bun": "^7.112.2",
+    "@sinclair/typebox": "^0.32.34",
+    "@t3-oss/env-core": "^0.7.3",
+    "@trpc/server": "11.0.0-rc.433",
+    "bullmq": "^5.8.3",
+    "consola": "^3.2.3",
+    "cron-parser": "^4.6.0",
+    "cuid": "^3.0.0",
+    "date-fns": "^2.30.0",
+    "elysia": "1.0.27",
+    "elysia-ip": "^1.0.3",
+    "elysia-rate-limit": "^3.2.2",
+    "ioredis": "^5.4.1",
+    "is-in-subnet": "^4.0.1",
+    "p-limit": "^6.0.0",
+    "pino": "^9.2.0",
+    "quirrel": "^1.14.1",
+    "stripe": "^16.0.0",
+    "superjson": "^2.2.1",
+    "zod": "^3.23.8"
+  },
+  "devDependencies": {
+    "@metrik/eslint-config": "workspace:^",
+    "@metrik/prettier-config": "workspace:^",
+    "@metrik/tsconfig": "workspace:^",
+    "@types/bun": "^1.1.0",
+    "dotenv-cli": "^7.4.2",
+    "typescript": "^5.5.2",
+    "vitest": "^1.5.2"
+  },
+  "eslintConfig": {
+    "root": true,
+    "extends": [
+      "@metrik/eslint-config/base"
+    ]
+  },
+  "prettier": "@metrik/prettier-config"
+}

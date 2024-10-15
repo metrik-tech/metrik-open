@@ -1,0 +1,42 @@
+{
+  "name": "@metrik/jwt",
+  "private": true,
+  "version": "0.1.0",
+  "exports": {
+    ".": "./index.ts"
+  },
+  "typesVersions": {
+    "*": {
+      "*": [
+        "src/*"
+      ]
+    }
+  },
+  "license": "MIT",
+  "scripts": {
+    "clean": "rm -rf .turbo node_modules",
+    "lint": "eslint .",
+    "format": "prettier --check \"**/*.{mjs,ts,md,json}\"",
+    "typecheck": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "@metrik/eslint-config": "workspace:^",
+    "@metrik/prettier-config": "workspace:^",
+    "@metrik/tsconfig": "workspace:^",
+    "@types/node": "^20.12.8",
+    "@types/uuid": "^9.0.8",
+    "eslint": "^8.56.0",
+    "typescript": "^5.5.2"
+  },
+  "eslintConfig": {
+    "extends": [
+      "@metrik/eslint-config/base"
+    ]
+  },
+  "prettier": "@metrik/prettier-config",
+  "dependencies": {
+    "@panva/hkdf": "^1.1.1",
+    "jose": "^5.1.1",
+    "uuid": "^9.0.1"
+  }
+}
